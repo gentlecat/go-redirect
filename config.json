@@ -1,7 +1,6 @@
 {
     "domain": "go.roman.zone",
     "packages": [
-        "caa",
         "clippy",
         "crawl",
         "game-collector",
