@@ -1,9 +1,7 @@
-name: Build
+name: Deploy
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
 
 jobs:
@@ -29,5 +27,13 @@ jobs:
             dep ensure
         fi
 
-    - name: Run
+    - name: Generate
       run: make run
+
+    - name: Deploy 🚀
+      uses: JamesIves/github-pages-deploy-action@3.7.1
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BRANCH: gh-pages
+        FOLDER: out
+        CLEAN: true
