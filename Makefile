@@ -13,3 +13,4 @@ build : clean fmt
 run : build
 	./gen \
 		-out "./out"
+	cp index.html out/index.html
