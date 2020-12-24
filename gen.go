@@ -1,62 +1,54 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"flag"
 	"html/template"
 	"log"
 	"os"
 	"path"
-	"path/filepath"
 	"time"
+
+	"github.com/google/go-github/v33/github"
 )
 
 var (
-	outputDir      = flag.String("out", "./out", "Output directory")
-	configFilePath = flag.String("cfg", "./config.json", "Configuration file")
+	outputDir = flag.String("out", "./out", "Output directory")
 
 	fileTemplate = template.Must(template.ParseFiles("template.html"))
 )
 
-var config struct {
-	Domain   string   `json:"domain"`
-	Packages []string `json:"packages"`
-}
-
 func main() {
 	flag.Parse()
 
-	opDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	start := time.Now()
-	log.Printf("Generating the files (%s)...", opDir)
 	defer log.Printf("Done in %v!", time.Since(start))
 
-	configFile, err := os.Open(*configFilePath)
-	if err != nil {
-		log.Fatal(err)
+	domainName := os.Getenv("DOMAIN_NAME")
+	githubUsername := os.Getenv("GITHUB_ACTOR")
+	if domainName == "" {
+		log.Fatal("Domain name must be specified in DOMAIN_NAME env variable")
 	}
-	defer configFile.Close()
-	jsonParser := json.NewDecoder(configFile)
-	if err = jsonParser.Decode(&config); err != nil {
-		log.Fatal(err)
+	if githubUsername == "" {
+		log.Fatal("GitHub username must be specified in GITHUB_USERNAME env variable")
 	}
+	log.Printf("Got configuration [domainName=%s, githubUsername=%s]", domainName, githubUsername)
+
+	log.Printf("Generating the files (at %s)...", *outputDir)
 
 	if err := os.MkdirAll(*outputDir, 0777); err != nil {
 		log.Fatal(err)
 	}
 
-	for _, p := range config.Packages {
-		generateFile(p)
+	for _, p := range getRepositories(githubUsername) {
+		if p.Language != nil && *p.Language == "Go" {
+			generateFile(domainName, *p.Name)
+		}
 	}
-
 }
 
-func generateFile(p string) {
-	filePath := path.Join(*outputDir, p+".html")
+func generateFile(domainName, packageName string) {
+	filePath := path.Join(*outputDir, packageName+".html")
 	file, err := os.Create(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -66,12 +58,22 @@ func generateFile(p string) {
 	err = fileTemplate.Execute(file, struct {
 		Domain, Package string
 	}{
-		config.Domain,
-		p,
+		domainName,
+		packageName,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	log.Printf("Generated %s", filePath)
+}
+
+func getRepositories(username string) []*github.Repository {
+	log.Printf("Getting the list of repositories for user %s from GitHub", username)
+	repos, _, err := github.NewClient(nil).Repositories.List(context.Background(), username, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Found %v repositories", len(repos))
+	return repos
 }

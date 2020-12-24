@@ -28,6 +28,8 @@ jobs:
         fi
 
     - name: Generate
+      env:
+        DOMAIN_NAME: go.roman.zone
       run: make run
 
     - name: Deploy 🚀
