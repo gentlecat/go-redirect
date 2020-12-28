@@ -7,8 +7,12 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 	"time"
+	"unicode/utf8"
 
+	git "github.com/go-git/go-git/v5"
 	"github.com/google/go-github/v33/github"
 )
 
@@ -42,13 +46,23 @@ func main() {
 
 	for _, p := range getRepositories(githubUsername) {
 		if p.Language != nil && *p.Language == "Go" {
-			generateFile(domainName, *p.Name)
+			log.Printf("Found Go repository \"%s\". Generating paths...", *p.Name)
+			for _, d := range getRepositoryPaths(p) {
+				generateFile(domainName, d)
+			}
+		} else {
+			log.Printf("Primary language of repository \"%s\" is not Go. Ignoring.", *p.Name)
 		}
 	}
 }
 
-func generateFile(domainName, packageName string) {
-	filePath := path.Join(*outputDir, packageName+".html")
+func generateFile(domainName, outputPath string) {
+	filePath := path.Join(*outputDir, outputPath+".html")
+	log.Printf("Generating %s", filePath)
+	if err := os.MkdirAll(path.Dir(filePath), 0777); err != nil {
+		log.Fatal(err)
+	}
+
 	file, err := os.Create(filePath)
 	if err != nil {
 		log.Fatal(err)
@@ -59,13 +73,11 @@ func generateFile(domainName, packageName string) {
 		Domain, Package string
 	}{
 		domainName,
-		packageName,
+		outputPath,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	log.Printf("Generated %s", filePath)
 }
 
 func getRepositories(username string) []*github.Repository {
@@ -76,4 +88,43 @@ func getRepositories(username string) []*github.Repository {
 	}
 	log.Printf("Found %v repositories", len(repos))
 	return repos
+}
+
+func getRepositoryPaths(repo *github.Repository) []string {
+	tmpDir := path.Join(*outputDir, "tmp")
+	tmpRepoPath := path.Join(tmpDir, *repo.Name)
+	_, err := git.PlainClone(tmpRepoPath, false, &git.CloneOptions{
+		URL: *repo.CloneURL,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tmpRepoPath)
+
+	return listDirs(tmpRepoPath, tmpDir)
+}
+
+func listDirs(curPath, tmpDir string) []string {
+	var dirs []string
+
+	err := filepath.Walk(curPath, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return nil
+		}
+		if strings.Contains(p, ".git") {
+			return nil
+		}
+		resultPath := strings.TrimPrefix(p, tmpDir)
+		_, i := utf8.DecodeRuneInString(resultPath)
+		dirs = append(dirs, strings.TrimPrefix(resultPath, resultPath[i:]))
+		return nil
+	})
+	if err != nil {
+		log.Println(err)
+	}
+
+	return dirs
 }
