@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"html/template"
 	"log"
 	"os"
@@ -26,7 +27,7 @@ func main() {
 	flag.Parse()
 
 	start := time.Now()
-	defer log.Printf("Done in %v!", time.Since(start))
+	defer fmt.Printf("Done in %v!\n", time.Since(start))
 
 	domainName := os.Getenv("DOMAIN_NAME")
 	githubUsername := os.Getenv("GITHUB_ACTOR")
@@ -36,9 +37,9 @@ func main() {
 	if githubUsername == "" {
 		log.Fatal("GitHub username must be specified in GITHUB_USERNAME env variable")
 	}
-	log.Printf("Got configuration [domainName=%s, githubUsername=%s]", domainName, githubUsername)
+	fmt.Printf("Got configuration [domainName=%s, githubUsername=%s]\n", domainName, githubUsername)
 
-	log.Printf("Generating the files (at %s)...", *outputDir)
+	fmt.Printf("Generating the files (at %s)...\n", *outputDir)
 
 	if err := os.MkdirAll(*outputDir, 0777); err != nil {
 		log.Fatal(err)
@@ -46,19 +47,19 @@ func main() {
 
 	for _, p := range getRepositories(githubUsername) {
 		if p.Language != nil && *p.Language == "Go" {
-			log.Printf("Found Go repository \"%s\". Generating paths...", *p.Name)
+			fmt.Printf("> Found Go repository \"%s\". Generating paths...\n", *p.Name)
 			for _, d := range getRepositoryPaths(p) {
 				generateFile(domainName, d)
 			}
 		} else {
-			log.Printf("Primary language of repository \"%s\" is not Go. Ignoring.", *p.Name)
+			fmt.Printf("> Primary language of repository \"%s\" is not Go. Ignoring.\n", *p.Name)
 		}
 	}
 }
 
 func generateFile(domainName, outputPath string) {
 	filePath := path.Join(*outputDir, outputPath+".html")
-	log.Printf("Generating %s", filePath)
+	fmt.Printf("  + %s", outputPath+".html\n")
 	if err := os.MkdirAll(path.Dir(filePath), 0777); err != nil {
 		log.Fatal(err)
 	}
@@ -81,12 +82,12 @@ func generateFile(domainName, outputPath string) {
 }
 
 func getRepositories(username string) []*github.Repository {
-	log.Printf("Getting the list of repositories for user %s from GitHub", username)
+	fmt.Printf("Getting the list of repositories for user %s from GitHub... ", username)
 	repos, _, err := github.NewClient(nil).Repositories.List(context.Background(), username, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Found %v repositories", len(repos))
+	fmt.Printf("Found %v repositories.\n", len(repos))
 	return repos
 }
 
