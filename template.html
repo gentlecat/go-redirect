@@ -2,12 +2,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en-us">
   <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <meta name="go-import" content="{{ .Domain }}{{ .Package }} git https://github.com/gentlecat{{ .Package }}.git">
+    <meta name="go-import" content="{{ .Domain }}/{{ .Package }} git https://github.com/gentlecat/{{ .Package }}.git">
    </head>
   <body>
-    See <a href="https://pkg.go.dev/{{ .Domain }}{{ .Package }}">https://pkg.go.dev/{{ .Domain }}{{ .Package }}</a> for documentation.
+    See <a href="https://pkg.go.dev/{{ .Domain }}/{{ .Package }}">https://pkg.go.dev/{{ .Domain }}/{{ .Package }}</a> for documentation.
     <script>
-      window.location = "https://pkg.go.dev/{{ .Domain }}{{ .Package }}"
+      window.location = "https://pkg.go.dev/{{ .Domain }}/{{ .Package }}"
     </script>
   </body>
 </html>

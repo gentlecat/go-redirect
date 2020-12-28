@@ -48,8 +48,8 @@ func main() {
 	for _, p := range getRepositories(githubUsername) {
 		if p.Language != nil && *p.Language == "Go" {
 			fmt.Printf("> Found Go repository \"%s\". Generating paths...\n", *p.Name)
-			for _, d := range getRepositoryPaths(p) {
-				generateFile(domainName, d)
+			for _, repoPath := range getRepositoryPaths(p) {
+				generateFile(domainName, *p.Name, repoPath)
 			}
 		} else {
 			fmt.Printf("> Primary language of repository \"%s\" is not Go. Ignoring.\n", *p.Name)
@@ -57,7 +57,7 @@ func main() {
 	}
 }
 
-func generateFile(domainName, outputPath string) {
+func generateFile(domainName, packageName, outputPath string) {
 	filePath := path.Join(*outputDir, outputPath+".html")
 	fmt.Printf("  + %s", outputPath+".html\n")
 	if err := os.MkdirAll(path.Dir(filePath), 0777); err != nil {
@@ -74,7 +74,7 @@ func generateFile(domainName, outputPath string) {
 		Domain, Package string
 	}{
 		domainName,
-		outputPath,
+		packageName,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -105,6 +105,7 @@ func getRepositoryPaths(repo *github.Repository) []string {
 	return listDirs(tmpRepoPath, tmpDir)
 }
 
+// listDirs returns a list of paths with all sub-directories within a given directory.
 func listDirs(curPath, tmpDir string) []string {
 	var dirs []string
 
